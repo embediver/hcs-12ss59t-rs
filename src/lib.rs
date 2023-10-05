@@ -28,34 +28,43 @@ pub enum Error {
     InvalidInput,
 }
 
-pub struct HCS12SS59T<SPI, RstPin, VdonPin, Delay> {
+pub struct HCS12SS59T<SPI, RstPin, VdonPin, Delay, CsPin> {
     spi: SPI,
     n_reset: RstPin,
     n_vdon: Option<VdonPin>,
     delay: Delay,
+    cs: CsPin,
 }
 
-impl<SPI, RstPin, VdonPin, Delay> HCS12SS59T<SPI, RstPin, VdonPin, Delay>
+impl<SPI, RstPin, VdonPin, Delay, CsPin> HCS12SS59T<SPI, RstPin, VdonPin, Delay, CsPin>
 where
     SPI: SpiDevice,
     RstPin: OutputPin,
     VdonPin: OutputPin,
+    CsPin: OutputPin,
     Delay: embedded_hal::delay::DelayUs,
 {
     /// Constructs a new HCS12SS59T
     ///
     /// Initialization has to be done seperately by calling [init()](Self::init()).
-    pub fn new(spi: SPI, n_reset: RstPin, delay: Delay, n_vdon: Option<VdonPin>) -> Self {
+    pub fn new(
+        spi: SPI,
+        n_reset: RstPin,
+        delay: Delay,
+        n_vdon: Option<VdonPin>,
+        cs: CsPin,
+    ) -> Self {
         Self {
             spi,
             n_reset,
             n_vdon,
             delay,
+            cs,
         }
     }
 
-    pub fn destroy(self) -> (SPI, RstPin, Delay, Option<VdonPin>) {
-        (self.spi, self.n_reset, self.delay, self.n_vdon)
+    pub fn destroy(self) -> (SPI, RstPin, Delay, Option<VdonPin>, CsPin) {
+        (self.spi, self.n_reset, self.delay, self.n_vdon, self.cs)
     }
 
     /// Initialize the VFD display
@@ -109,7 +118,11 @@ where
     fn send_cmd(&mut self, cmd: Command, arg: u8) -> Result<(), Error> {
         let arg = arg & 0x0F;
         let command = [cmd as u8 | arg];
+        self.cs.set_low().map_err(|_| Error::Gpio)?;
+        self.delay.delay_us(5);
         self.spi.write(&command).map_err(|_| Error::Spi)?;
+        self.delay.delay_us(20);
+        self.cs.set_high().map_err(|_| Error::Gpio)?;
         Ok(())
     }
 
@@ -117,10 +130,18 @@ where
         let mut data = [0_u8; NUM_DIGITS + 1];
         data[0] = Command::DCRamWrite as u8;
 
-        for (data, c) in data.iter_mut().zip(text.chars().into_iter()) {
+        for (data, c) in data.iter_mut().skip(1).rev().zip(text.chars().into_iter()) {
             *data = char_to_font_code(c);
         }
-        self.spi.write(&data).map_err(|_| Error::Spi)
+        self.cs.set_low().map_err(|_| Error::Gpio)?;
+        self.delay.delay_us(1);
+        for byte in data {
+            self.spi.write(&[byte]).map_err(|_| Error::Spi)?;
+            self.delay.delay_us(8);
+        }
+        self.delay.delay_us(12);
+        self.cs.set_high().map_err(|_| Error::Gpio)?;
+        Ok(())
     }
 }
 
