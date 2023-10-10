@@ -127,7 +127,7 @@ where
     }
 
     pub fn display(&mut self, text: &str) -> Result<(), Error> {
-        let mut data = [0_u8; NUM_DIGITS + 1];
+        let mut data = [48_u8; NUM_DIGITS + 1];
         data[0] = Command::DCRamWrite as u8;
 
         for (data, c) in data.iter_mut().skip(1).rev().zip(text.chars().into_iter()) {
@@ -153,6 +153,7 @@ fn char_to_font_code(c: char) -> u8 {
         '@'..='_' => c as u8 - 48,
         ' '..='/' => c as u8 + 16,
         'a'..='z' => c as u8 - 80,
+        '0'..='?' => c as u8 + 16,
         _ => 79,
     }
 }
