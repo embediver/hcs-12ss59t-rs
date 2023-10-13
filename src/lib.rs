@@ -1,7 +1,11 @@
 #![no_std]
 
+pub mod font;
+
 use embedded_hal::digital::OutputPin;
 use embedded_hal::spi::SpiDevice;
+
+use font::FontTable;
 
 const NUM_DIGITS: usize = 12;
 
@@ -115,6 +119,9 @@ where
         }
     }
 
+    /// Send one command byte with with four bits argument payload
+    ///
+    /// (The higher four bit specify the command, the lower four bit are the argument)
     fn send_cmd(&mut self, cmd: Command, arg: u8) -> Result<(), Error> {
         let arg = arg & 0x0F;
         let command = [cmd as u8 | arg];
@@ -126,6 +133,23 @@ where
         Ok(())
     }
 
+    /// Write abritrary bytes to the display
+    pub fn write_buf(&mut self, buf: &[u8]) -> Result<(), Error> {
+        self.cs.set_low().map_err(|_| Error::Gpio)?;
+        self.delay.delay_us(1);
+        for byte in buf {
+            self.spi.write(&[*byte]).map_err(|_| Error::Spi)?;
+            self.delay.delay_us(8);
+        }
+        self.delay.delay_us(12);
+        self.cs.set_high().map_err(|_| Error::Gpio)?;
+        Ok(())
+    }
+
+    /// Write a ASCII string to the display RAM.
+    ///
+    /// Characters are mapped using the internal font map.
+    /// Strings are truncated to fit the display.
     pub fn display(&mut self, text: &str) -> Result<(), Error> {
         let mut data = [48_u8; NUM_DIGITS + 1];
         data[0] = Command::DCRamWrite as u8;
@@ -136,6 +160,68 @@ where
         self.cs.set_low().map_err(|_| Error::Gpio)?;
         self.delay.delay_us(1);
         for byte in data {
+            self.spi.write(&[byte]).map_err(|_| Error::Spi)?;
+            self.delay.delay_us(8);
+        }
+        self.delay.delay_us(12);
+        self.cs.set_high().map_err(|_| Error::Gpio)?;
+        Ok(())
+    }
+
+    /// Write a single character to display RAM.
+    ///
+    /// The HCS-12SS59T has 16 byte DCRAM, from which 0..12 are usable for the 12 connected digits.
+    pub fn set_char<C: Into<FontTable>>(&mut self, addr: u8, char: C) -> Result<(), Error> {
+        let addr = addr & 0x0F;
+        let command = [Command::DCRamWrite as u8 | addr, char.into() as u8];
+
+        self.cs.set_low().map_err(|_| Error::Gpio)?;
+        self.delay.delay_us(1);
+        for byte in command {
+            self.spi.write(&[byte]).map_err(|_| Error::Spi)?;
+            self.delay.delay_us(8);
+        }
+        self.delay.delay_us(12);
+        self.cs.set_high().map_err(|_| Error::Gpio)?;
+        Ok(())
+    }
+
+    /// Set character generator RAM
+    ///
+    /// Write a two byte character pattern to one of 16 CGRAM adresses.
+    ///
+    /// Valid address values are 0x00..=0x0F
+    ///
+    /// The pattern is specified with two bytes for 16 segments,
+    /// for a 14 segment display, segment 2 and 5 are don't care.
+    ///
+    /// |    Bit | 7     | 6     | 5     | 4     | 3     | 2     | 1     | 0    |
+    /// |-------:|-------|-------|-------|-------|-------|-------|-------|------|
+    /// | Byte 1 | SEG8  | SEG7  | SEG6  | SEG5  | SEG4  | SEG3  | SEG2  | SEG1 |
+    /// | Byte 2 | SEG16 | SEG15 | SEG14 | SEG13 | SEG12 | SEG11 | SEG10 | SEG9 |
+    ///
+    /// ``` text
+    ///   SEG1     SEG2
+    /// S S     S     0 3
+    /// E  E    E    1  G
+    /// G   G   G   G   E
+    /// 8    1  9  E    S
+    ///       6   S
+    ///   SEG15   SEG11
+    /// S     4 S S     4
+    /// E    1  E  E    G
+    /// G   G   G   G   E
+    /// 7  E    1    1  S
+    ///   S     3     2
+    ///   SEG6     SEG5
+    /// ```
+    pub fn set_char_pattern(&mut self, addr: u8, pattern: [u8; 2]) -> Result<(), Error> {
+        let addr = addr & 0x0F;
+        let command = [Command::CGRamWrite as u8 | addr, pattern[0], pattern[1]];
+
+        self.cs.set_low().map_err(|_| Error::Gpio)?;
+        self.delay.delay_us(1);
+        for byte in command {
             self.spi.write(&[byte]).map_err(|_| Error::Spi)?;
             self.delay.delay_us(8);
         }
