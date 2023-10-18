@@ -204,7 +204,7 @@ impl From<char> for FontTable {
     ///
     /// Characters not available are converted to [?](FontTable::CharQestMrk)
     fn from(value: char) -> Self {
-        super::char_to_font_code(value).try_into().unwrap()
+        char_to_font_code(value).try_into().unwrap()
     }
 }
 impl TryFrom<u8> for FontTable {
@@ -217,5 +217,18 @@ impl TryFrom<u8> for FontTable {
         } else {
             unsafe { Ok(core::mem::transmute(value)) }
         }
+    }
+}
+
+pub(crate) fn char_to_font_code(c: char) -> u8 {
+    if !c.is_ascii() {
+        return 79;
+    }
+    match c {
+        '@'..='_' => c as u8 - 48,
+        ' '..='/' => c as u8 + 16,
+        'a'..='z' => c as u8 - 80,
+        '0'..='?' => c as u8 + 16,
+        _ => 79,
     }
 }

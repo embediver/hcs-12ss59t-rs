@@ -1,15 +1,19 @@
 #![no_std]
 
-pub mod font;
+mod font;
+pub use font::FontTable;
+
+pub mod animation;
 
 use embedded_hal::digital::OutputPin;
 use embedded_hal::spi::SpiDevice;
 
-use font::FontTable;
+use font::char_to_font_code;
 
 const NUM_DIGITS: usize = 12;
 
 #[repr(u8)]
+#[allow(dead_code)]
 enum Command {
     DCRamWrite = 0x10,
     CGRamWrite = 0x20,
@@ -19,6 +23,7 @@ enum Command {
     Lights = 0x70,
 }
 #[repr(u8)]
+#[allow(dead_code)]
 enum Lights {
     Normal = 0x00,
     Off = 0x01,
@@ -190,7 +195,7 @@ where
     ///
     /// Write a two byte character pattern to one of 16 CGRAM adresses.
     ///
-    /// Valid address values are 0x00..=0x0F
+    /// Valid address values are [FontTable::Ram0] to [FontTable::RamF]
     ///
     /// The pattern is specified with two bytes for 16 segments,
     /// for a 14 segment display, segment 2 and 5 are don't care.
@@ -215,9 +220,33 @@ where
     ///   S     3     2
     ///   SEG6     SEG5
     /// ```
-    pub fn set_char_pattern(&mut self, addr: u8, pattern: [u8; 2]) -> Result<(), Error> {
-        let addr = addr & 0x0F;
-        let command = [Command::CGRamWrite as u8 | addr, pattern[0], pattern[1]];
+    pub fn set_char_pattern(&mut self, addr: FontTable, pattern: [u8; 2]) -> Result<(), Error> {
+        use FontTable::*;
+        if !matches!(
+            addr,
+            Ram0 | Ram1
+                | Ram2
+                | Ram3
+                | Ram4
+                | Ram5
+                | Ram6
+                | Ram7
+                | Ram8
+                | Ram9
+                | RamA
+                | RamB
+                | RamC
+                | RamD
+                | RamE
+                | RamF
+        ) {
+            return Err(Error::InvalidInput);
+        }
+        let command = [
+            Command::CGRamWrite as u8 | addr as u8,
+            pattern[0],
+            pattern[1],
+        ];
 
         self.cs.set_low().map_err(|_| Error::Gpio)?;
         self.delay.delay_us(1);
@@ -228,18 +257,5 @@ where
         self.delay.delay_us(12);
         self.cs.set_high().map_err(|_| Error::Gpio)?;
         Ok(())
-    }
-}
-
-fn char_to_font_code(c: char) -> u8 {
-    if !c.is_ascii() {
-        return 79;
-    }
-    match c {
-        '@'..='_' => c as u8 - 48,
-        ' '..='/' => c as u8 + 16,
-        'a'..='z' => c as u8 - 80,
-        '0'..='?' => c as u8 + 16,
-        _ => 79,
     }
 }
