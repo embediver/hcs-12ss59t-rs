@@ -135,67 +135,67 @@ pub enum FontTable {
     CharQestMrk = 0x4F,
     /// CGRAM address 0x0
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     Ram0 = 0x00,
     /// CGRAM address 0x1
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     Ram1 = 0x01,
     /// CGRAM address 0x2
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     Ram2 = 0x02,
     /// CGRAM address 0x3
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     Ram3 = 0x03,
     /// CGRAM address 0x4
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     Ram4 = 0x04,
     /// CGRAM address 0x5
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     Ram5 = 0x05,
     /// CGRAM address 0x6
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     Ram6 = 0x06,
     /// CGRAM address 0x7
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     Ram7 = 0x07,
     /// CGRAM address 0x8
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     Ram8 = 0x08,
     /// CGRAM address 0x9
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     Ram9 = 0x09,
     /// CGRAM address 0xA
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     RamA = 0x0A,
     /// CGRAM address 0xB
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     RamB = 0x0B,
     /// CGRAM address 0xC
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     RamC = 0x0C,
     /// CGRAM address 0xD
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     RamD = 0x0D,
     /// CGRAM address 0xE
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     RamE = 0x0E,
     /// CGRAM address 0xF
     ///
-    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_char_pattern())
+    /// See [HCS12SS59T::set_char_pattern()](super::HCS12SS59T::set_cgram_pattern())
     RamF = 0x0F,
 }
 

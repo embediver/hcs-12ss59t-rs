@@ -8,8 +8,6 @@ pub mod animation;
 use embedded_hal::digital::OutputPin;
 use embedded_hal::spi::SpiDevice;
 
-use font::char_to_font_code;
-
 const NUM_DIGITS: usize = 12;
 
 #[repr(u8)]
@@ -138,7 +136,7 @@ where
         Ok(())
     }
 
-    /// Write abritrary bytes to the display
+    /// Write abritrary bytes to the display controller
     pub fn write_buf(&mut self, buf: &[u8]) -> Result<(), Error> {
         self.cs.set_low().map_err(|_| Error::Gpio)?;
         self.delay.delay_us(1);
@@ -155,12 +153,16 @@ where
     ///
     /// Characters are mapped using the internal font map.
     /// Strings are truncated to fit the display.
-    pub fn display(&mut self, text: &str) -> Result<(), Error> {
+    pub fn display<T>(&mut self, text: T) -> Result<(), Error>
+    where
+        T: IntoIterator,
+        T::Item: Into<FontTable>,
+    {
         let mut data = [48_u8; NUM_DIGITS + 1];
         data[0] = Command::DCRamWrite as u8;
 
-        for (data, c) in data.iter_mut().skip(1).rev().zip(text.chars().into_iter()) {
-            *data = char_to_font_code(c);
+        for (data, c) in data.iter_mut().skip(1).rev().zip(text.into_iter()) {
+            *data = c.into() as u8;
         }
         self.cs.set_low().map_err(|_| Error::Gpio)?;
         self.delay.delay_us(1);
@@ -202,8 +204,8 @@ where
     ///
     /// |    Bit | 7     | 6     | 5     | 4     | 3     | 2     | 1     | 0    |
     /// |-------:|-------|-------|-------|-------|-------|-------|-------|------|
-    /// | Byte 1 | SEG8  | SEG7  | SEG6  | SEG5  | SEG4  | SEG3  | SEG2  | SEG1 |
-    /// | Byte 2 | SEG16 | SEG15 | SEG14 | SEG13 | SEG12 | SEG11 | SEG10 | SEG9 |
+    /// | Byte 0 | SEG8  | SEG7  | SEG6  | SEG5  | SEG4  | SEG3  | SEG2  | SEG1 |
+    /// | Byte 1 | SEG16 | SEG15 | SEG14 | SEG13 | SEG12 | SEG11 | SEG10 | SEG9 |
     ///
     /// ``` text
     ///   SEG1     SEG2
@@ -220,7 +222,7 @@ where
     ///   S     3     2
     ///   SEG6     SEG5
     /// ```
-    pub fn set_char_pattern(&mut self, addr: FontTable, pattern: [u8; 2]) -> Result<(), Error> {
+    pub fn set_cgram_pattern(&mut self, addr: FontTable, pattern: [u8; 2]) -> Result<(), Error> {
         use FontTable::*;
         if !matches!(
             addr,
