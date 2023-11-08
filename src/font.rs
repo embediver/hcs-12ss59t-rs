@@ -213,7 +213,7 @@ impl TryFrom<u8> for FontTable {
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         // Since the font table is contiguous and has no gaps, transmute is used here for fast conversion and small code size.
         if value > 0x4F {
-            return Err(());
+            Err(())
         } else {
             unsafe { Ok(core::mem::transmute(value)) }
         }
