@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 #![no_std]
 
 mod font;
@@ -54,6 +55,8 @@ where
     /// Constructs a new HCS12SS59T
     ///
     /// Initialization has to be done seperately by calling [init()](Self::init()).
+    ///
+    /// It is necessary to have a dedicated CS-Pin and a [Delay] due to timing restrictions of the HCS-12SS59T.
     pub fn new(
         spi: SPI,
         n_reset: RstPin,
