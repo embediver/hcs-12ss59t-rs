@@ -27,9 +27,9 @@ impl<'a, M: Mode> ScrollingText<'a, M> {
     ///
     /// `short_text_scrolling` sets wether text shorter than the display will scroll.
     #[allow(unused_variables)]
-    pub fn new(string: &'a str, short_text_scrolling: bool, mode: M) -> ScrollingText<'a, M> {
+    pub fn new(data: &'a str, short_text_scrolling: bool, mode: M) -> ScrollingText<'a, M> {
         ScrollingText {
-            content: string,
+            content: data,
             idx: 0,
             reverse: false,
             always: short_text_scrolling,
@@ -42,6 +42,8 @@ impl ScrollingText<'_, Cycle> {
     /// Get cycling text
     ///
     /// The window wraps to the start of the text if the end is reached.
+    ///
+    /// Text shorter than the display will be repeated.
     pub fn get_next(&mut self) -> core::iter::Skip<core::iter::Cycle<core::str::Chars>> {
         if self.content.len() <= NUM_DIGITS && !self.always {
             return self.content.chars().cycle().skip(0);
