@@ -7,6 +7,8 @@ authors = ["Marvin Gudel <github.marvin@gudel.org>"]
 keywords = ["hcs-12ss59t", "display", "no_std", "embedded-hal-driver"]
 categories = ["embedded", "no-std", "hardware-support", "embedded-hal"]
 license = "MIT"
+readme = "README.md"
+repository = "https://github.com/embediver/hcs-12ss59t-rs"
 
 [dependencies]
 embedded-hal = "1"

@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 #![no_std]
 
-mod font;
+pub mod font;
 pub use font::FontTable;
 
 pub mod animation;
@@ -61,7 +61,7 @@ where
     ///
     /// Initialization has to be done seperately by calling [init()](Self::init()).
     ///
-    /// It is necessary to have a dedicated CS-Pin and a [Delay] due to timing restrictions of the HCS-12SS59T.
+    /// It is necessary to have a dedicated CS-Pin and a [Delay](embedded_hal::delay::DelayNs) due to timing restrictions of the HCS-12SS59T.
     pub fn new(
         spi: SPI,
         n_reset: RstPin,
@@ -157,24 +157,36 @@ where
         Ok(())
     }
 
-    /// Write a ASCII string to the display RAM.
+    /// Display a string
     ///
-    /// Characters are mapped using the internal font map.
+    /// Convenience method to avoid converting the string to a iterator first.
+    /// Characters are mapped using the internal [FontTable].
     /// Strings are truncated to fit the display.
-    pub fn display<T>(&mut self, text: T) -> Result<(), Error<SPI::Error>>
+    pub fn display_str(&mut self, text: &str) -> Result<(), Error<SPI::Error>> {
+        self.display(text.chars())
+    }
+
+    /// Write to the display RAM
+    ///
+    /// Displays the data, discarding unneded items.
+    ///
+    /// `From<char>` is implemented for [FontTable] so this method can
+    /// be called with strings by calling [chars()](::core::primitive::str::chars) on the string.
+    /// Alternatively [display_str](HCS12SS59T::display_str) does this for you.
+    pub fn display<T>(&mut self, data: T) -> Result<(), Error<SPI::Error>>
     where
         T: IntoIterator,
         T::Item: Into<FontTable>,
     {
-        let mut data = [48_u8; NUM_DIGITS + 1];
-        data[0] = Command::DCRamWrite as u8;
+        let mut buf = [48_u8; NUM_DIGITS + 1];
+        buf[0] = Command::DCRamWrite as u8;
 
-        for (data, c) in data.iter_mut().skip(1).rev().zip(text.into_iter()) {
-            *data = c.into() as u8;
+        for (buf, c) in buf.iter_mut().skip(1).rev().zip(data.into_iter()) {
+            *buf = c.into() as u8;
         }
         self.cs.set_low().map_err(|_| Error::Gpio)?;
         self.delay.delay_us(1);
-        for byte in data {
+        for byte in buf {
             self.spi.write(&[byte])?;
             self.delay.delay_us(8);
         }
@@ -183,7 +195,7 @@ where
         Ok(())
     }
 
-    /// Write a single character to display RAM.
+    /// Write a single character to display RAM
     ///
     /// The HCS-12SS59T has 16 byte DCRAM, from which 0..12 are usable for the 12 connected digits.
     pub fn set_char<C: Into<FontTable>>(

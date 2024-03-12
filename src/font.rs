@@ -1,5 +1,8 @@
+use core::fmt::Display;
+
 /// HCS-12SS59T Font Table
-#[repr(u8)]
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)] // This is important since we are transmuting from u8 in TryFrom<u8>
 pub enum FontTable {
     /// Character `@`
     ChatAt = 0x10,
@@ -207,13 +210,23 @@ impl From<char> for FontTable {
         char_to_font_code(value).try_into().unwrap()
     }
 }
+
+/// The error type returned when a integer to [FontTable] conversion failes
+#[derive(Debug, Clone, Copy)]
+pub struct TryFromIntError;
+impl Display for TryFromIntError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "out of range integral to FontTable conversion attempted")
+    }
+}
+
 impl TryFrom<u8> for FontTable {
-    type Error = ();
+    type Error = TryFromIntError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         // Since the font table is contiguous and has no gaps, transmute is used here for fast conversion and small code size.
         if value > 0x4F {
-            Err(())
+            Err(TryFromIntError)
         } else {
             unsafe { Ok(core::mem::transmute(value)) }
         }

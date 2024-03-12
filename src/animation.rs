@@ -46,6 +46,7 @@ impl ScrollingText<'_, Cycle> {
     /// Text shorter than the display will be repeated.
     pub fn get_next(&mut self) -> core::iter::Skip<core::iter::Cycle<core::str::Chars>> {
         if self.content.len() <= NUM_DIGITS && !self.always {
+            #[allow(clippy::iter_skip_zero)]
             return self.content.chars().cycle().skip(0);
         }
         let disp_iter = self.content.chars().cycle().skip(self.idx);
