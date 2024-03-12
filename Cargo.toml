@@ -9,5 +9,5 @@ categories = ["embedded", "no-std", "hardware-support", "embedded-hal"]
 license = "MIT"
 
 [dependencies]
-embedded-hal = "1.0.0-alpha.10"
+embedded-hal = "1"
 

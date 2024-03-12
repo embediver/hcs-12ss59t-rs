@@ -7,7 +7,7 @@ pub use font::FontTable;
 pub mod animation;
 
 use embedded_hal::digital::OutputPin;
-use embedded_hal::spi::SpiDevice;
+use embedded_hal::spi::{self, SpiDevice};
 
 const NUM_DIGITS: usize = 12;
 
@@ -30,10 +30,15 @@ enum Lights {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum Error {
-    Spi,
+pub enum Error<E: spi::Error> {
+    Spi(E),
     Gpio,
     InvalidInput,
+}
+impl<E: spi::Error> From<E> for Error<E> {
+    fn from(value: E) -> Self {
+        Error::Spi(value)
+    }
 }
 
 pub struct HCS12SS59T<SPI, RstPin, VdonPin, Delay, CsPin> {
@@ -50,7 +55,7 @@ where
     RstPin: OutputPin,
     VdonPin: OutputPin,
     CsPin: OutputPin,
-    Delay: embedded_hal::delay::DelayUs,
+    Delay: embedded_hal::delay::DelayNs,
 {
     /// Constructs a new HCS12SS59T
     ///
@@ -80,7 +85,7 @@ where
     /// Initialize the VFD display
     ///
     /// Resets the display, turns on the supply voltage and sets brightness to 7.
-    pub fn init(&mut self) -> Result<(), Error> {
+    pub fn init(&mut self) -> Result<(), Error<SPI::Error>> {
         self.n_reset.set_low().map_err(|_| Error::Gpio)?;
         self.delay.delay_us(25);
         self.n_reset.set_high().map_err(|_| Error::Gpio)?;
@@ -96,7 +101,7 @@ where
     }
 
     /// Turns the supply voltage off (if supply pin is configured)
-    pub fn vd_off(&mut self) -> Result<(), Error> {
+    pub fn vd_off(&mut self) -> Result<(), Error<SPI::Error>> {
         if let Some(pin) = &mut self.n_vdon {
             pin.set_high().map_err(|_| Error::Gpio)?; // Display voltage OFF
         }
@@ -104,7 +109,7 @@ where
     }
 
     /// Turns the supply voltage on (if supply pin is configured)
-    pub fn vd_on(&mut self) -> Result<(), Error> {
+    pub fn vd_on(&mut self) -> Result<(), Error<SPI::Error>> {
         if let Some(pin) = &mut self.n_vdon {
             pin.set_low().map_err(|_| Error::Gpio)?; // Display voltage ON
         }
@@ -114,7 +119,7 @@ where
     /// Set the brightness (duty cycle) of the Display
     ///
     /// Turns the display off when brightness is `0` and on when brightness is `1..15`.
-    pub fn brightness(&mut self, brightness: u8) -> Result<(), Error> {
+    pub fn brightness(&mut self, brightness: u8) -> Result<(), Error<SPI::Error>> {
         match brightness {
             0 => self.vd_off(),
             1..=15 => {
@@ -128,23 +133,23 @@ where
     /// Send one command byte with with four bits argument payload
     ///
     /// (The higher four bit specify the command, the lower four bit are the argument)
-    fn send_cmd(&mut self, cmd: Command, arg: u8) -> Result<(), Error> {
+    fn send_cmd(&mut self, cmd: Command, arg: u8) -> Result<(), Error<SPI::Error>> {
         let arg = arg & 0x0F;
         let command = [cmd as u8 | arg];
         self.cs.set_low().map_err(|_| Error::Gpio)?;
         self.delay.delay_us(5);
-        self.spi.write(&command).map_err(|_| Error::Spi)?;
+        self.spi.write(&command)?;
         self.delay.delay_us(20);
         self.cs.set_high().map_err(|_| Error::Gpio)?;
         Ok(())
     }
 
     /// Write abritrary bytes to the display controller
-    pub fn write_buf(&mut self, buf: &[u8]) -> Result<(), Error> {
+    pub fn write_buf(&mut self, buf: &[u8]) -> Result<(), Error<SPI::Error>> {
         self.cs.set_low().map_err(|_| Error::Gpio)?;
         self.delay.delay_us(1);
         for byte in buf {
-            self.spi.write(&[*byte]).map_err(|_| Error::Spi)?;
+            self.spi.write(&[*byte])?;
             self.delay.delay_us(8);
         }
         self.delay.delay_us(12);
@@ -156,7 +161,7 @@ where
     ///
     /// Characters are mapped using the internal font map.
     /// Strings are truncated to fit the display.
-    pub fn display<T>(&mut self, text: T) -> Result<(), Error>
+    pub fn display<T>(&mut self, text: T) -> Result<(), Error<SPI::Error>>
     where
         T: IntoIterator,
         T::Item: Into<FontTable>,
@@ -170,7 +175,7 @@ where
         self.cs.set_low().map_err(|_| Error::Gpio)?;
         self.delay.delay_us(1);
         for byte in data {
-            self.spi.write(&[byte]).map_err(|_| Error::Spi)?;
+            self.spi.write(&[byte])?;
             self.delay.delay_us(8);
         }
         self.delay.delay_us(12);
@@ -181,14 +186,18 @@ where
     /// Write a single character to display RAM.
     ///
     /// The HCS-12SS59T has 16 byte DCRAM, from which 0..12 are usable for the 12 connected digits.
-    pub fn set_char<C: Into<FontTable>>(&mut self, addr: u8, char: C) -> Result<(), Error> {
+    pub fn set_char<C: Into<FontTable>>(
+        &mut self,
+        addr: u8,
+        char: C,
+    ) -> Result<(), Error<SPI::Error>> {
         let addr = addr & 0x0F;
         let command = [Command::DCRamWrite as u8 | addr, char.into() as u8];
 
         self.cs.set_low().map_err(|_| Error::Gpio)?;
         self.delay.delay_us(1);
         for byte in command {
-            self.spi.write(&[byte]).map_err(|_| Error::Spi)?;
+            self.spi.write(&[byte])?;
             self.delay.delay_us(8);
         }
         self.delay.delay_us(12);
@@ -225,7 +234,11 @@ where
     ///   S     3     2
     ///   SEG6     SEG5
     /// ```
-    pub fn set_cgram_pattern(&mut self, addr: FontTable, pattern: [u8; 2]) -> Result<(), Error> {
+    pub fn set_cgram_pattern(
+        &mut self,
+        addr: FontTable,
+        pattern: [u8; 2],
+    ) -> Result<(), Error<SPI::Error>> {
         use FontTable::*;
         if !matches!(
             addr,
@@ -256,7 +269,7 @@ where
         self.cs.set_low().map_err(|_| Error::Gpio)?;
         self.delay.delay_us(1);
         for byte in command {
-            self.spi.write(&[byte]).map_err(|_| Error::Spi)?;
+            self.spi.write(&[byte])?;
             self.delay.delay_us(8);
         }
         self.delay.delay_us(12);
