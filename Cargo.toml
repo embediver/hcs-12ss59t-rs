@@ -13,3 +13,6 @@ repository = "https://github.com/embediver/hcs-12ss59t-rs"
 [dependencies]
 embedded-hal = "1"
 
+[dev-dependencies]
+embedded-hal-mock = { version = "0.10.0", default-features = false, features = ["eh1"] }
+

@@ -41,6 +41,47 @@ impl<E: spi::Error> From<E> for Error<E> {
     }
 }
 
+/// A HCS-12SS59T instance
+///
+/// A stateless driver to configure a HCS-12SS59T.
+/// Usage is straight forward and requires little setup.
+///
+/// ## Example
+/// ```no_run
+/// # fn run() -> Result<(), hcs_12ss59t::Error<embedded_hal::spi::ErrorKind>> {
+/// use hcs_12ss59t::HCS12SS59T;
+/// # use embedded_hal_mock::eh1::pin::{
+/// #     Mock as PinMock, State as PinState, Transaction as PinTransaction,
+/// # };
+/// # use embedded_hal_mock::eh1::spi::{Mock as SpiMock, Transaction as SpiTransaction};
+/// # let spi_expectations = [
+/// #     SpiTransaction::transaction_start(),
+/// # ];
+/// # let spi = SpiMock::new(&spi_expectations);
+/// # let n_reset_expectations = [
+/// #     PinTransaction::set(PinState::Low),
+/// # ];
+/// # let n_reset = PinMock::new(&n_reset_expectations);
+/// # let cs_expectations = [
+/// #     PinTransaction::set(PinState::Low),
+/// # ];
+/// # let cs = PinMock::new(&cs_expectations);
+/// # let vdon_expectations = [
+/// #     PinTransaction::set(PinState::Low),
+/// # ];
+/// # let n_vdon = PinMock::new(&vdon_expectations);
+/// # let delay = embedded_hal_mock::eh1::delay::NoopDelay::new();
+///
+/// let mut my_vfd = HCS12SS59T::new(spi, n_reset, delay, Some(n_vdon), cs);
+///
+/// my_vfd.init()?;
+/// my_vfd.brightness(5)?;
+/// my_vfd.display_str("Hello world!")?;
+///
+/// let (spi, rst, delay, vdon, cs) = my_vfd.destroy();
+/// # Ok(())
+/// # }
+/// ```
 pub struct HCS12SS59T<SPI, RstPin, VdonPin, Delay, CsPin> {
     spi: SPI,
     n_reset: RstPin,
@@ -287,5 +328,78 @@ where
         self.delay.delay_us(12);
         self.cs.set_high().map_err(|_| Error::Gpio)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+#[macro_use]
+extern crate std;
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test_init() {
+        use crate::HCS12SS59T;
+        use embedded_hal_mock::eh1::pin::{
+            Mock as PinMock, State as PinState, Transaction as PinTransaction,
+        };
+        use embedded_hal_mock::eh1::spi::{Mock as SpiMock, Transaction as SpiTransaction};
+
+        let spi_expectations = [
+            SpiTransaction::transaction_start(),
+            SpiTransaction::write(0x6C), // num digit set 12
+            SpiTransaction::transaction_end(),
+            SpiTransaction::transaction_start(),
+            SpiTransaction::write(0x57), // display duty set 7
+            SpiTransaction::transaction_end(),
+            SpiTransaction::transaction_start(),
+            SpiTransaction::write(0x70), // light set normal
+            SpiTransaction::transaction_end(),
+            SpiTransaction::transaction_start(),
+            SpiTransaction::write(0x55), // display duty set 5
+            SpiTransaction::transaction_end(),
+        ];
+        let spi = SpiMock::new(&spi_expectations);
+        let n_reset_expectations = [
+            PinTransaction::set(PinState::Low),
+            PinTransaction::set(PinState::High),
+        ];
+        let n_reset = PinMock::new(&n_reset_expectations);
+
+        let cs_expectations = [
+            PinTransaction::set(PinState::Low), // Command one
+            PinTransaction::set(PinState::High),
+            PinTransaction::set(PinState::Low), // Command two
+            PinTransaction::set(PinState::High),
+            PinTransaction::set(PinState::Low), // Command three
+            PinTransaction::set(PinState::High),
+            PinTransaction::set(PinState::Low), // Command four
+            PinTransaction::set(PinState::High),
+        ];
+        let cs = PinMock::new(&cs_expectations);
+
+        let vdon_expectations = [
+            PinTransaction::set(PinState::Low),
+            PinTransaction::set(PinState::Low),
+        ];
+        let n_vdon = PinMock::new(&vdon_expectations);
+
+        let delay = embedded_hal_mock::eh1::delay::NoopDelay::new();
+
+        let mut my_vfd = HCS12SS59T::new(spi, n_reset, delay, Some(n_vdon), cs);
+
+        my_vfd.init().unwrap();
+        my_vfd.brightness(5).unwrap();
+        // my_vfd.display_str("Hello world!").unwrap(); // testing a string write requires a spi transaction for every byte which also get mapped to the font table...
+
+        let (mut spi, mut rst, _delay, vdon, mut cs) = my_vfd.destroy();
+
+        spi.done();
+        rst.done();
+        if let Some(mut vdon) = vdon {
+            vdon.done();
+        }
+        cs.done();
     }
 }
