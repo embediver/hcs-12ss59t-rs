@@ -10,9 +10,14 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/embediver/hcs-12ss59t-rs"
 
+[features]
+async = ["dep:embedded-hal-async", "embedded-hal-mock/embedded-hal-async"]
+
 [dependencies]
 embedded-hal = "1"
+embedded-hal-async = { version = "1", optional = true }
 
 [dev-dependencies]
-embedded-hal-mock = { version = "0.10.0", default-features = false, features = ["eh1"] }
+embedded-hal-mock = { version = "0.11.0", default-features = false, features = ["eh1"] }
+tokio = { version = "1.43", features = ["rt", "macros"]}
 
