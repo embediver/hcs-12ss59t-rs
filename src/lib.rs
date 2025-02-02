@@ -10,8 +10,6 @@ pub use font::FontTable;
 pub mod animation;
 
 use embedded_hal::digital::OutputPin;
-#[cfg(not(feature = "async"))]
-use embedded_hal::spi::SpiDevice;
 use embedded_hal::spi::{self};
 
 const NUM_DIGITS: usize = 12;
@@ -114,7 +112,13 @@ where
     ///
     /// Initialization has to be done seperately by calling [init()](Self::init()).
     ///
-    /// It is necessary to have a dedicated CS-Pin and a [Delay](embedded_hal::delay::DelayNs) due to timing restrictions of the HCS-12SS59T.
+    /// It is necessary to have a dedicated CS-Pin and a `Delay` due to timing restrictions of the HCS-12SS59T.
+    ///
+    /// Due to this, exclusive access to the SPI bus is necessary.
+    /// This is guaranteed by requiring a `SpiBus` rather than a `SpiDevice`.
+    ///
+    /// _Note_: If a shared bus is needed, this has to be implemented by the user
+    /// (by wrapping the HCS-112SS59T and a `SpiBus` and implementing a custom lock mechanism).
     pub fn new(
         spi: SPI,
         n_reset: RstPin,
@@ -156,7 +160,7 @@ where
 #[cfg_attr(docsrs, doc(cfg(not(feature = "async"))))]
 impl<SPI, RstPin, VdonPin, Delay, CsPin> HCS12SS59T<SPI, RstPin, VdonPin, Delay, CsPin>
 where
-    SPI: SpiDevice,
+    SPI: embedded_hal::spi::SpiBus,
     RstPin: OutputPin,
     VdonPin: OutputPin,
     CsPin: OutputPin,
@@ -358,7 +362,7 @@ where
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
 impl<SPI, RstPin, VdonPin, Delay, CsPin> HCS12SS59T<SPI, RstPin, VdonPin, Delay, CsPin>
 where
-    SPI: embedded_hal_async::spi::SpiDevice,
+    SPI: embedded_hal_async::spi::SpiBus,
     RstPin: OutputPin,
     VdonPin: OutputPin,
     CsPin: OutputPin,
@@ -573,18 +577,10 @@ mod tests {
         use embedded_hal_mock::eh1::spi::{Mock as SpiMock, Transaction as SpiTransaction};
 
         let spi_expectations = [
-            SpiTransaction::transaction_start(),
             SpiTransaction::write(0x6C), // num digit set 12
-            SpiTransaction::transaction_end(),
-            SpiTransaction::transaction_start(),
             SpiTransaction::write(0x57), // display duty set 7
-            SpiTransaction::transaction_end(),
-            SpiTransaction::transaction_start(),
             SpiTransaction::write(0x70), // light set normal
-            SpiTransaction::transaction_end(),
-            SpiTransaction::transaction_start(),
             SpiTransaction::write(0x55), // display duty set 5
-            SpiTransaction::transaction_end(),
         ];
         let spi = SpiMock::new(&spi_expectations);
         let n_reset_expectations = [
@@ -641,18 +637,10 @@ mod tests {
         use embedded_hal_mock::eh1::spi::{Mock as SpiMock, Transaction as SpiTransaction};
 
         let spi_expectations = [
-            SpiTransaction::transaction_start(),
             SpiTransaction::write(0x6C), // num digit set 12
-            SpiTransaction::transaction_end(),
-            SpiTransaction::transaction_start(),
             SpiTransaction::write(0x57), // display duty set 7
-            SpiTransaction::transaction_end(),
-            SpiTransaction::transaction_start(),
             SpiTransaction::write(0x70), // light set normal
-            SpiTransaction::transaction_end(),
-            SpiTransaction::transaction_start(),
             SpiTransaction::write(0x55), // display duty set 5
-            SpiTransaction::transaction_end(),
         ];
         let spi = SpiMock::new(&spi_expectations);
         let n_reset_expectations = [
