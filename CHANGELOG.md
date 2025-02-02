@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.0.0] - 2025-02-02
+
 ### Changes
   - Require exclusive ownership over the SPI bus through `SpiBus`
     (This is required because the driver manages the CS itself due to timing constraints)
@@ -26,3 +29,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/embediver/hcs-12ss59t-rs/tree/master
 [0.1.0]: https://github.com/embediver/hcs-12ss59t-rs/tree/v0.1.0
+[1.0.0]: https://github.com/embediver/hcs-12ss59t-rs/tree/v1.0.0

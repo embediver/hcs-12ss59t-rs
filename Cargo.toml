@@ -1,7 +1,7 @@
 [package]
 name = "hcs-12ss59t"
 description = "Platform-agnostic embedded-hal driver for Samsung HCS-12SS59T VFD displays."
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 authors = ["Marvin Gudel <github.marvin@gudel.org>"]
 keywords = ["hcs-12ss59t", "display", "no_std", "embedded-hal-driver"]
